@@ -1,71 +1,68 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Minus, Plus, Zap } from "lucide-react";
+import { useXPBalance } from "@/hooks/useXPBalance";
 
 interface BetControlsProps {
   betAmount: number;
   onBetChange: (amount: number) => void;
   onPlay: () => void;
   isPlaying: boolean;
-  balance: number;
 }
 
-export const BetControls = ({ betAmount, onBetChange, onPlay, isPlaying, balance }: BetControlsProps) => {
-  const betOptions = [0.01, 0.05, 0.1, 0.5, 1, 5];
+export const BetControls = ({ betAmount, onBetChange, onPlay, isPlaying }: BetControlsProps) => {
+  const { xpBalance, hasEnoughXP } = useXPBalance();
+  const betOptions = [10, 25, 50, 100, 250, 500]; // XP amounts
+
+  const canAffordBet = hasEnoughXP(betAmount);
 
   return (
-    <Card className="p-4 bg-gradient-card border-border/50 backdrop-blur-sm">
-      <div className="space-y-4">
-        {/* Balance Display */}
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-muted-foreground">Balance</span>
-          <span className="text-lg font-bold text-foreground">${balance.toFixed(2)}</span>
-        </div>
-
+    <Card className="p-2 bg-gradient-card border-border/50 backdrop-blur-sm">
+      <div className="space-y-1.5">
         {/* Bet Amount Selector */}
-        <div className="space-y-2">
-          <label className="text-sm text-muted-foreground">Bet Amount</label>
-          <div className="flex items-center gap-2">
+        <div className="space-y-0.5">
+          <label className="text-[10px] text-muted-foreground">Bet Amount (XP)</label>
+          <div className="flex items-center gap-1.5">
             <Button
               size="icon"
               variant="outline"
-              onClick={() => onBetChange(Math.max(0.01, betAmount - 0.01))}
-              disabled={isPlaying || betAmount <= 0.01}
-              className="border-primary/30 hover:border-primary hover:bg-primary/10"
+              onClick={() => onBetChange(Math.max(10, betAmount - 10))}
+              disabled={isPlaying || betAmount <= 10}
+              className="h-7 w-7 border-primary/30 hover:border-primary hover:bg-primary/10"
             >
-              <Minus className="h-4 w-4" />
+              <Minus className="h-2.5 w-2.5" />
             </Button>
             <div className="flex-1 text-center">
-              <div className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-                ${betAmount.toFixed(2)}
+              <div className="text-lg font-bold bg-gradient-primary bg-clip-text text-transparent">
+                {betAmount} XP
               </div>
             </div>
             <Button
               size="icon"
               variant="outline"
-              onClick={() => onBetChange(Math.min(balance, betAmount + 0.01))}
-              disabled={isPlaying || betAmount >= balance}
-              className="border-primary/30 hover:border-primary hover:bg-primary/10"
+              onClick={() => onBetChange(Math.min(xpBalance, betAmount + 10))}
+              disabled={isPlaying || betAmount >= xpBalance}
+              className="h-7 w-7 border-primary/30 hover:border-primary hover:bg-primary/10"
             >
-              <Plus className="h-4 w-4" />
+              <Plus className="h-2.5 w-2.5" />
             </Button>
           </div>
         </div>
 
         {/* Quick Bet Options */}
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-3 gap-1">
           {betOptions.map((amount) => (
             <Button
               key={amount}
               variant="outline"
               size="sm"
               onClick={() => onBetChange(amount)}
-              disabled={isPlaying || amount > balance}
-              className={`border-primary/30 hover:border-primary hover:bg-primary/10 ${
+              disabled={isPlaying || !hasEnoughXP(amount)}
+              className={`h-7 text-[11px] border-primary/30 hover:border-primary hover:bg-primary/10 ${
                 betAmount === amount ? "bg-primary/20 border-primary" : ""
               }`}
             >
-              ${amount}
+              {amount} XP
             </Button>
           ))}
         </div>
@@ -73,12 +70,12 @@ export const BetControls = ({ betAmount, onBetChange, onPlay, isPlaying, balance
         {/* Play Button */}
         <Button
           size="lg"
-          className="w-full bg-gradient-primary hover:shadow-glow transition-all duration-300 font-bold text-lg"
+          className="w-full h-10 bg-gradient-primary hover:shadow-glow transition-all duration-300 font-bold text-sm"
           onClick={onPlay}
-          disabled={isPlaying || betAmount > balance}
+          disabled={isPlaying || !canAffordBet}
         >
-          <Zap className="mr-2 h-5 w-5" />
-          {isPlaying ? "Spinning..." : "Play & Match"}
+          <Zap className="mr-1.5 h-3.5 w-3.5" />
+          {isPlaying ? "Spinning..." : !canAffordBet ? "Insufficient XP" : "Play & Match"}
         </Button>
       </div>
     </Card>

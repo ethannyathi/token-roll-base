@@ -37,21 +37,21 @@ export const PoolStats = ({ totalPool, totalWinners, totalBuyback, platformFee }
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-3">
+    <div className="grid grid-cols-2 gap-2">
       {stats.map((stat, index) => {
         const Icon = stat.icon;
         return (
           <Card
             key={index}
-            className="p-3 bg-gradient-card border-border/50 backdrop-blur-sm hover:border-primary/30 transition-all"
+            className="p-2 bg-gradient-card border-border/50 backdrop-blur-sm hover:border-primary/30 transition-all"
           >
-            <div className="flex items-start gap-2">
+            <div className="flex items-start gap-1.5">
               <div className={`${stat.color} mt-0.5`}>
-                <Icon className="h-4 w-4" />
+                <Icon className="h-3 w-3" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs text-muted-foreground mb-0.5">{stat.label}</p>
-                <p className={`font-bold text-sm ${stat.color} truncate`}>{stat.value}</p>
+                <p className="text-[10px] text-muted-foreground mb-0.5">{stat.label}</p>
+                <p className={`font-bold text-xs ${stat.color} truncate`}>{stat.value}</p>
               </div>
             </div>
           </Card>

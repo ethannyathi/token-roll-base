@@ -5,31 +5,54 @@ import { Badge } from "@/components/ui/badge";
 import { Reel } from "@/components/Reel";
 import { BetControls } from "@/components/BetControls";
 import { PoolStats } from "@/components/PoolStats";
+import { DirectWalletConnect } from "@/components/DirectWalletConnect";
+import { NetworkSwitcher } from "@/components/NetworkSwitcher";
+import { XPStore } from "@/components/XPStore";
 import { mockTokens } from "@/data/mockTokens";
-import { Wallet, Trophy, Sparkles } from "lucide-react";
+import { NETWORKS, NetworkId } from "@/constants/networks";
+import { Sparkles, Trophy } from "lucide-react";
 import { toast } from "sonner";
+import { useSoundEffects } from "@/hooks/useSoundEffects";
+import { useAccount } from "wagmi";
+import { useXPBalance } from "@/hooks/useXPBalance";
 
 const Index = () => {
-  const [betAmount, setBetAmount] = useState(0.1);
-  const [balance, setBalance] = useState(10.0);
+  const [betAmount, setBetAmount] = useState(10);
   const [isPlaying, setIsPlaying] = useState(false);
   const [totalPool, setTotalPool] = useState(1234.56);
   const [reelStates, setReelStates] = useState([false, false, false]);
   const [winningIndices, setWinningIndices] = useState<number[]>([]);
   const [isWinning, setIsWinning] = useState(false);
   const [isJackpot, setIsJackpot] = useState(false);
+  const [currentNetwork, setCurrentNetwork] = useState<NetworkId>(NETWORKS.BASE_SEPOLIA.id);
+  
+  const { playSpinSound, playReelStopSound, playWinSound, playJackpotSound } = useSoundEffects();
+  const { isConnected } = useAccount();
+  const { xpBalance, deductXP, addXP, hasEnoughXP } = useXPBalance();
 
   const handlePlay = async () => {
-    if (betAmount > balance) {
-      toast.error("Insufficient balance!");
+    if (!hasEnoughXP(betAmount)) {
+      toast.error("Insufficient XP! Buy more to continue playing.");
       return;
     }
 
     setIsPlaying(true);
-    setBalance((prev) => prev - betAmount);
+    
+    // Deduct XP for the bet
+    try {
+      deductXP(betAmount, 'bet');
+    } catch (error) {
+      toast.error("Failed to place bet");
+      setIsPlaying(false);
+      return;
+    }
+    
     setTotalPool((prev) => prev + betAmount);
     setIsWinning(false);
     setIsJackpot(false);
+
+    // Play spin sound
+    playSpinSound();
 
     // Start all reels spinning
     setReelStates([true, true, true]);
@@ -42,6 +65,7 @@ const Index = () => {
       await new Promise((resolve) => setTimeout(resolve, delays[i]));
       const randomIndex = Math.floor(Math.random() * mockTokens.length);
       results.push(randomIndex);
+      playReelStopSound(); // Play stop sound for each reel
       setReelStates((prev) => {
         const newState = [...prev];
         newState[i] = false;
@@ -61,18 +85,20 @@ const Index = () => {
       if (token1.rank && token2.rank && token3.rank && 
           token1.rank <= 3 && token2.rank <= 3 && token3.rank <= 3) {
         setIsJackpot(true);
+        playJackpotSound(); // Play jackpot sound
         const jackpotWin = betAmount * 100;
-        setBalance((prev) => prev + jackpotWin);
-        toast.success(`🎰 JACKPOT! You won $${jackpotWin.toFixed(2)}!`, {
+        addXP(jackpotWin, 'win');
+        toast.success(`🎰 JACKPOT! You won ${jackpotWin.toLocaleString()} XP!`, {
           duration: 5000,
         });
       }
       // Check for type match
       else if (token1.type === token2.type && token2.type === token3.type) {
         setIsWinning(true);
+        playWinSound(); // Play win sound
         const winAmount = betAmount * 10;
-        setBalance((prev) => prev + winAmount);
-        toast.success(`🎉 Winner! You won $${winAmount.toFixed(2)}!`, {
+        addXP(winAmount, 'win');
+        toast.success(`🎉 Winner! You won ${winAmount.toLocaleString()} XP!`, {
           duration: 4000,
         });
       } else {
@@ -88,57 +114,73 @@ const Index = () => {
   const platformFee = totalPool * 0.1;
 
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div className="min-h-screen bg-background pb-40 max-w-md mx-auto">
       {/* Header */}
       <header className="sticky top-0 z-50 backdrop-blur-xl border-b border-border/50 bg-background/80">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-primary flex items-center justify-center text-2xl">
+        <div className="px-3 py-3">
+          <div className="flex items-center justify-between mb-2 gap-2">
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              <div className="w-7 h-7 rounded-lg bg-gradient-primary flex items-center justify-center text-lg">
                 🎰
               </div>
               <div>
-                <h1 className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+                <h1 className="text-sm font-bold bg-gradient-primary bg-clip-text text-transparent leading-tight">
                   Base Slots
                 </h1>
-                <p className="text-xs text-muted-foreground">Win Real Crypto</p>
+                <p className="text-[9px] text-muted-foreground">Win Real Crypto</p>
               </div>
             </div>
-            <Button variant="outline" className="border-primary/30 hover:border-primary hover:bg-primary/10">
-              <Wallet className="mr-2 h-4 w-4" />
-              Connect Wallet
-            </Button>
+            
+            {/* XP Balance - Center */}
+            <div className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-gradient-card border border-primary/30 flex-shrink-0">
+              <Sparkles className="h-3 w-3 text-primary animate-pulse-glow" />
+              <span className="text-sm font-bold bg-gradient-primary bg-clip-text text-transparent whitespace-nowrap">
+                {xpBalance.toLocaleString()}
+              </span>
+            </div>
+            
+            <div className="flex-shrink-0">
+              <DirectWalletConnect />
+            </div>
+          </div>
+          <div className="flex items-center gap-2 justify-between">
+            <NetworkSwitcher 
+              currentNetwork={currentNetwork}
+              onNetworkChange={setCurrentNetwork}
+              disabled={isPlaying}
+            />
+            <XPStore />
           </div>
         </div>
       </header>
 
       {/* Hero Section */}
-      <section className="container mx-auto px-4 py-8">
-        <Card className="p-6 bg-gradient-card border-border/50 backdrop-blur-sm text-center">
-          <div className="flex items-center justify-center gap-2 mb-2">
-            <Sparkles className="h-5 w-5 text-primary animate-pulse-glow" />
-            <h2 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-              Match & Win Crypto
+      <section className="px-3 py-4">
+        <Card className="p-4 bg-gradient-card border-border/50 backdrop-blur-sm text-center">
+          <div className="flex items-center justify-center gap-1.5 mb-2">
+            <Sparkles className="h-4 w-4 text-primary animate-pulse-glow" />
+            <h2 className="text-lg font-bold bg-gradient-primary bg-clip-text text-transparent">
+              Buy XP & Play Instantly
             </h2>
-            <Sparkles className="h-5 w-5 text-primary animate-pulse-glow" />
+            <Sparkles className="h-4 w-4 text-primary animate-pulse-glow" />
           </div>
-          <p className="text-muted-foreground mb-4">
-            Spin the reels and match Base tokens to win real payouts
+          <p className="text-xs text-muted-foreground mb-3">
+            Purchase XP with crypto, bet instantly with no gas fees!
           </p>
-          <div className="flex flex-wrap gap-2 justify-center">
-            <Badge variant="outline" className="bg-success/20 text-success border-success/30">
-              Match 3 same type → 10x
+          <div className="flex flex-col gap-1.5">
+            <Badge variant="outline" className="bg-success/20 text-success border-success/30 text-xs">
+              Match 3 same type → 10x XP
             </Badge>
-            <Badge variant="outline" className="bg-jackpot/20 text-jackpot border-jackpot/30">
-              Top 3 market cap → 100x
+            <Badge variant="outline" className="bg-jackpot/20 text-jackpot border-jackpot/30 text-xs">
+              Top 3 market cap → 100x XP
             </Badge>
           </div>
         </Card>
       </section>
 
       {/* Reels Section */}
-      <section className="container mx-auto px-4">
-        <div className="grid grid-cols-3 gap-3 mb-6">
+      <section className="px-3">
+        <div className="grid grid-cols-3 gap-2 mb-4">
           {[0, 1, 2].map((reelIndex) => (
             <Reel
               key={reelIndex}
@@ -153,7 +195,7 @@ const Index = () => {
       </section>
 
       {/* Pool Stats */}
-      <section className="container mx-auto px-4 mb-6">
+      <section className="px-3 mb-4">
         <PoolStats
           totalPool={totalPool}
           totalWinners={totalWinners}
@@ -163,27 +205,27 @@ const Index = () => {
       </section>
 
       {/* Leaderboard Preview */}
-      <section className="container mx-auto px-4 mb-6">
-        <Card className="p-4 bg-gradient-card border-border/50 backdrop-blur-sm">
-          <div className="flex items-center gap-2 mb-3">
-            <Trophy className="h-5 w-5 text-jackpot" />
-            <h3 className="font-bold text-foreground">Top Winners Today</h3>
+      <section className="px-3 mb-4">
+        <Card className="p-3 bg-gradient-card border-border/50 backdrop-blur-sm">
+          <div className="flex items-center gap-2 mb-2">
+            <Trophy className="h-4 w-4 text-jackpot" />
+            <h3 className="text-sm font-bold text-foreground">Top Winners</h3>
           </div>
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             {[
-              { address: "0x7a3f...b2c1", amount: 128.45, token: "🐱" },
-              { address: "0x9e4d...a8f3", amount: 95.12, token: "🌙" },
-              { address: "0x2c1b...d5e7", amount: 73.89, token: "🐶" },
+              { address: "0x7a3f...b2c1", amount: 12845, token: "🐱" },
+              { address: "0x9e4d...a8f3", amount: 9512, token: "🌙" },
+              { address: "0x2c1b...d5e7", amount: 7389, token: "🐶" },
             ].map((winner, i) => (
               <div
                 key={i}
-                className="flex items-center justify-between p-2 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
+                className="flex items-center justify-between p-2 rounded-lg bg-muted/30"
               >
                 <div className="flex items-center gap-2">
-                  <span className="text-lg">{winner.token}</span>
-                  <span className="text-sm text-muted-foreground">{winner.address}</span>
+                  <span className="text-base">{winner.token}</span>
+                  <span className="text-xs text-muted-foreground">{winner.address}</span>
                 </div>
-                <span className="text-sm font-bold text-success">${winner.amount}</span>
+                <span className="text-xs font-bold text-success">{winner.amount} XP</span>
               </div>
             ))}
           </div>
@@ -191,14 +233,13 @@ const Index = () => {
       </section>
 
       {/* Fixed Bottom Controls */}
-      <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-xl border-t border-border/50 z-50">
-        <div className="container mx-auto px-4 py-4">
+      <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-xl border-t border-border/50 z-50 max-w-md mx-auto">
+        <div className="px-3 py-2">
           <BetControls
             betAmount={betAmount}
             onBetChange={setBetAmount}
             onPlay={handlePlay}
             isPlaying={isPlaying}
-            balance={balance}
           />
         </div>
       </div>
