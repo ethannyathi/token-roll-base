@@ -11,6 +11,14 @@ interface ReelProps {
 
 export const Reel = ({ tokens, isSpinning, highlightedIndex, isWinning, isJackpot }: ReelProps) => {
   const [offset, setOffset] = useState(0);
+  
+  // Precise measurements for perfect alignment
+  const CARD_HEIGHT = 70; // px
+  const GAP = 8; // px (gap-2 = 0.5rem = 8px)
+  const ITEM_HEIGHT = CARD_HEIGHT + GAP; // Total height per item
+  const PADDING = 8; // px (p-2 = 0.5rem = 8px)
+  const VISIBLE_ITEMS = 5;
+  const CONTAINER_HEIGHT = (VISIBLE_ITEMS * ITEM_HEIGHT) - GAP + (PADDING * 2); // Precise container height
 
   useEffect(() => {
     if (isSpinning) {
@@ -22,24 +30,29 @@ export const Reel = ({ tokens, isSpinning, highlightedIndex, isWinning, isJackpo
   }, [isSpinning, tokens.length]);
 
   // Create infinite loop of tokens
-  const displayTokens = [...tokens, ...tokens, ...tokens];
+  const displayTokens = [...tokens, ...tokens, ...tokens, ...tokens];
 
   return (
-    <div className="relative h-[280px] overflow-hidden rounded-xl border border-border/50 bg-card/30 backdrop-blur-sm">
+    <div 
+      className="relative overflow-hidden rounded-xl border border-border/50 bg-card/30 backdrop-blur-sm"
+      style={{ height: `${CONTAINER_HEIGHT}px` }}
+    >
       {/* Highlight overlay for center token - Winner Line */}
-      <div className="absolute inset-0 pointer-events-none z-10">
-        <div className="absolute top-1/2 left-0 right-0 -translate-y-1/2 h-16 border-y-2 border-primary bg-primary/10 animate-pulse shadow-[0_0_20px_rgba(139,92,246,0.3)]">
+      <div className="absolute inset-0 pointer-events-none z-10 flex items-center justify-center">
+        <div 
+          className="w-full border-y-2 border-primary bg-primary/10 animate-pulse shadow-[0_0_20px_rgba(139,92,246,0.3)]"
+          style={{ height: `${CARD_HEIGHT}px` }}
+        >
           {/* Scanning line animation */}
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/20 to-transparent animate-scan"></div>
         </div>
       </div>
 
       <div
-        className={`flex flex-col gap-2 p-2 transition-transform ${
-          isSpinning ? "duration-100" : "duration-500"
-        }`}
+        className="flex flex-col gap-2 p-2 w-full transition-transform"
         style={{
-          transform: `translateY(-${offset * 72}px)`,
+          transform: `translateY(${(CONTAINER_HEIGHT / 2) - (CARD_HEIGHT / 2) - PADDING - (ITEM_HEIGHT * 2) - (offset * ITEM_HEIGHT)}px)`,
+          transitionDuration: isSpinning ? '100ms' : '500ms',
         }}
       >
         {displayTokens.map((token, index) => {
@@ -47,7 +60,11 @@ export const Reel = ({ tokens, isSpinning, highlightedIndex, isWinning, isJackpo
             Math.floor(offset + 2) % tokens.length === highlightedIndex;
           
           return (
-            <div key={`${token.id}-${index}`} className="h-16 flex-shrink-0">
+            <div 
+              key={`${token.id}-${index}`} 
+              className="flex-shrink-0"
+              style={{ height: `${CARD_HEIGHT}px` }}
+            >
               <TokenCard 
                 token={token} 
                 isWinning={isHighlighted && isWinning}

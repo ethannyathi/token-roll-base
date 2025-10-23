@@ -180,7 +180,7 @@ const Index = () => {
 
       {/* Reels Section */}
       <section className="px-3">
-        <div className="grid grid-cols-3 gap-2 mb-4">
+        <div className="grid grid-cols-3 gap-2 mb-4 items-center">
           {[0, 1, 2].map((reelIndex) => (
             <Reel
               key={reelIndex}
