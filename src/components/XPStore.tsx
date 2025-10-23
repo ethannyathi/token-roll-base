@@ -63,7 +63,7 @@ export const XPStore = () => {
 
       if (status === 'completed') {
         // Credit XP to user
-        const xpAdded = addXP(pkg.xpAmount, 'purchase', payment.id);
+        addXP(pkg.xpAmount, 'purchase', payment.id);
         console.log('✅ XP credited successfully:', pkg.xpAmount, 'New balance should update');
         
         toast.success(`Successfully purchased ${pkg.xpAmount.toLocaleString()} XP!`, {
