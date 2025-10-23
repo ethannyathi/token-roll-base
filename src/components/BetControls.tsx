@@ -8,9 +8,10 @@ interface BetControlsProps {
   onBetChange: (amount: number) => void;
   onPlay: () => void;
   isPlaying: boolean;
+  isCelebrating?: boolean;
 }
 
-export const BetControls = ({ betAmount, onBetChange, onPlay, isPlaying }: BetControlsProps) => {
+export const BetControls = ({ betAmount, onBetChange, onPlay, isPlaying, isCelebrating = false }: BetControlsProps) => {
   const { xpBalance, hasEnoughXP } = useXPBalance();
   const betOptions = [10, 25, 50, 100, 250, 500]; // XP amounts
 
@@ -70,12 +71,22 @@ export const BetControls = ({ betAmount, onBetChange, onPlay, isPlaying }: BetCo
         {/* Play Button */}
         <Button
           size="lg"
-          className="w-full h-10 bg-gradient-primary hover:shadow-glow transition-all duration-300 font-bold text-sm"
+          className={`w-full h-10 transition-all duration-300 font-bold text-sm ${
+            isCelebrating
+              ? 'bg-success hover:bg-success/90 animate-pulse'
+              : 'bg-gradient-primary hover:shadow-glow'
+          }`}
           onClick={onPlay}
-          disabled={isPlaying || !canAffordBet}
+          disabled={isPlaying && !isCelebrating || !canAffordBet && !isCelebrating}
         >
           <Zap className="mr-1.5 h-3.5 w-3.5" />
-          {isPlaying ? "Spinning..." : !canAffordBet ? "Insufficient XP" : "Play & Match"}
+          {isCelebrating 
+            ? "🎉 Stop & Play Again" 
+            : isPlaying 
+            ? "Spinning..." 
+            : !canAffordBet 
+            ? "Insufficient XP" 
+            : "Play & Match"}
         </Button>
       </div>
     </Card>

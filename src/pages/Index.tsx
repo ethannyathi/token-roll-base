@@ -24,6 +24,8 @@ const Index = () => {
   const [winningIndices, setWinningIndices] = useState<number[]>([]);
   const [isWinning, setIsWinning] = useState(false);
   const [isJackpot, setIsJackpot] = useState(false);
+  const [isCelebrating, setIsCelebrating] = useState(false);
+  const [celebrationTimer, setCelebrationTimer] = useState<NodeJS.Timeout | null>(null);
   const [currentNetwork, setCurrentNetwork] = useState<NetworkId>(NETWORKS.BASE_SEPOLIA.id);
   
   const { playSpinSound, playReelStopSound, playWinSound, playJackpotSound } = useSoundEffects();
@@ -31,6 +33,18 @@ const Index = () => {
   const { xpBalance, deductXP, addXP, hasEnoughXP } = useXPBalance();
 
   const handlePlay = async () => {
+    // If celebrating, stop celebration and allow immediate replay
+    if (isCelebrating) {
+      if (celebrationTimer) {
+        clearTimeout(celebrationTimer);
+        setCelebrationTimer(null);
+      }
+      setIsCelebrating(false);
+      setIsWinning(false);
+      setIsJackpot(false);
+      return;
+    }
+
     if (!hasEnoughXP(betAmount)) {
       toast.error("Insufficient XP! Buy more to continue playing.");
       return;
@@ -50,6 +64,7 @@ const Index = () => {
     setTotalPool((prev) => prev + betAmount);
     setIsWinning(false);
     setIsJackpot(false);
+    setIsCelebrating(false);
 
     // Play spin sound
     playSpinSound();
@@ -81,10 +96,13 @@ const Index = () => {
       const token2 = mockTokens[results[1]];
       const token3 = mockTokens[results[2]];
 
+      let didWin = false;
+
       // Check for jackpot (all top 3 market cap tokens)
       if (token1.rank && token2.rank && token3.rank && 
           token1.rank <= 3 && token2.rank <= 3 && token3.rank <= 3) {
         setIsJackpot(true);
+        didWin = true;
         playJackpotSound(); // Play jackpot sound
         const jackpotWin = betAmount * 100;
         addXP(jackpotWin, 'win');
@@ -95,6 +113,7 @@ const Index = () => {
       // Check for type match
       else if (token1.type === token2.type && token2.type === token3.type) {
         setIsWinning(true);
+        didWin = true;
         playWinSound(); // Play win sound
         const winAmount = betAmount * 10;
         addXP(winAmount, 'win');
@@ -103,6 +122,18 @@ const Index = () => {
         });
       } else {
         toast.error("No match. Try again!");
+      }
+
+      // Start celebration if won
+      if (didWin) {
+        setIsCelebrating(true);
+        // Auto-stop celebration after 3 seconds
+        const timer = setTimeout(() => {
+          setIsCelebrating(false);
+          setIsWinning(false);
+          setIsJackpot(false);
+        }, 3000);
+        setCelebrationTimer(timer);
       }
 
       setIsPlaying(false);
@@ -114,7 +145,50 @@ const Index = () => {
   const platformFee = totalPool * 0.1;
 
   return (
-    <div className="min-h-screen bg-background pb-40 max-w-md mx-auto">
+    <div className="min-h-screen bg-background pb-40 max-w-md mx-auto relative">
+      {/* Celebration Overlay */}
+      {isCelebrating && (
+        <div className="fixed inset-0 z-[60] pointer-events-none max-w-md mx-auto">
+          {/* Confetti particles */}
+          {[...Array(30)].map((_, i) => (
+            <div
+              key={i}
+              className="absolute animate-confetti"
+              style={{
+                left: `${Math.random() * 100}%`,
+                top: '100%',
+                animationDelay: `${Math.random() * 0.5}s`,
+                animationDuration: `${2 + Math.random()}s`,
+              }}
+            >
+              <div
+                className={`w-2 h-2 ${
+                  isJackpot
+                    ? 'bg-gradient-jackpot'
+                    : i % 4 === 0
+                    ? 'bg-primary'
+                    : i % 4 === 1
+                    ? 'bg-success'
+                    : i % 4 === 2
+                    ? 'bg-accent'
+                    : 'bg-secondary'
+                } rounded-full`}
+                style={{
+                  boxShadow: isJackpot ? 'var(--shadow-jackpot)' : 'var(--shadow-glow)',
+                }}
+              />
+            </div>
+          ))}
+          
+          {/* Celebration message */}
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+            <div className={`text-6xl animate-celebrate ${isJackpot ? 'animate-rainbow' : ''}`}>
+              {isJackpot ? '🎰💰🎉' : '🎉✨🎊'}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <header className="sticky top-0 z-50 backdrop-blur-xl border-b border-border/50 bg-background/80">
         <div className="px-3 py-3">
@@ -240,6 +314,7 @@ const Index = () => {
             onBetChange={setBetAmount}
             onPlay={handlePlay}
             isPlaying={isPlaying}
+            isCelebrating={isCelebrating}
           />
         </div>
       </div>
