@@ -63,7 +63,8 @@ export const XPStore = () => {
 
       if (status === 'completed') {
         // Credit XP to user
-        addXP(pkg.xpAmount, 'purchase', payment.id);
+        const xpAdded = addXP(pkg.xpAmount, 'purchase', payment.id);
+        console.log('✅ XP credited successfully:', pkg.xpAmount, 'New balance should update');
         
         toast.success(`Successfully purchased ${pkg.xpAmount.toLocaleString()} XP!`, {
           id: payment.id,
@@ -75,7 +76,10 @@ export const XPStore = () => {
           console.log('Payer info:', payment.payerInfoResponses);
         }
 
-        setIsOpen(false);
+        // Close dialog after a short delay to let user see the success
+        setTimeout(() => {
+          setIsOpen(false);
+        }, 1000);
       } else {
         toast.error('Payment failed or timed out', { id: payment.id });
       }
@@ -112,61 +116,121 @@ export const XPStore = () => {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid grid-cols-2 gap-2 mt-3">
-          {XP_PACKAGES.map((pkg) => (
-            <Card
-              key={pkg.id}
-              className={`p-2 cursor-pointer transition-all hover:shadow-glow ${
-                pkg.popular
-                  ? 'border-primary bg-gradient-card relative'
-                  : 'border-border/50 hover:border-primary/50'
-              }`}
-              onClick={() => handlePurchase(pkg)}
-            >
-              {pkg.popular && (
-                <Badge className="absolute -top-1.5 -right-1.5 bg-gradient-primary text-[9px] px-1 py-0">
-                  <Sparkles className="h-2.5 w-2.5 mr-0.5" />
-                  Popular
-                </Badge>
-              )}
-              
-              <div className="space-y-1.5">
-                <div>
-                  <h3 className="font-bold text-xs">{pkg.name}</h3>
-                  <p className="text-base font-bold text-primary">
-                    {pkg.xpAmount.toLocaleString()} XP
-                  </p>
-                </div>
-
-                {pkg.bonus > 0 && (
-                  <Badge variant="outline" className="bg-success/20 text-success border-success/30 text-[9px] px-1 py-0">
-                    +{pkg.bonus}% Bonus!
+        <div className="space-y-2 mt-3">
+          {/* First row - 2 items */}
+          <div className="grid grid-cols-2 gap-2">
+            {XP_PACKAGES.slice(0, 2).map((pkg) => (
+              <Card
+                key={pkg.id}
+                className={`p-2 cursor-pointer transition-all hover:shadow-glow ${
+                  pkg.popular
+                    ? 'border-primary bg-gradient-card relative'
+                    : 'border-border/50 hover:border-primary/50'
+                }`}
+                onClick={() => handlePurchase(pkg)}
+              >
+                {pkg.popular && (
+                  <Badge className="absolute -top-1.5 -right-1.5 bg-gradient-primary text-[9px] px-1 py-0">
+                    <Sparkles className="h-2.5 w-2.5 mr-0.5" />
+                    Popular
                   </Badge>
                 )}
-
-                <div className="pt-1.5 border-t border-border/50">
-                  <div className="text-[10px] text-muted-foreground mb-1">
-                    Base: {(pkg.xpAmount / (1 + pkg.bonus / 100)).toFixed(0)} XP
+                
+                <div className="space-y-1.5">
+                  <div>
+                    <h3 className="font-bold text-xs">{pkg.name}</h3>
+                    <p className="text-base font-bold text-primary">
+                      {pkg.xpAmount.toLocaleString()} XP
+                    </p>
                   </div>
-                  <Button
-                    className="w-full bg-gradient-primary hover:shadow-glow h-7 text-xs"
-                    disabled={isProcessing}
-                  >
-                    {selectedPackage?.id === pkg.id && isProcessing ? (
-                      <>
-                        <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                        Processing...
-                      </>
-                    ) : (
-                      <>
-                        Pay ${pkg.price}
-                      </>
-                    )}
-                  </Button>
+
+                  {pkg.bonus > 0 && (
+                    <Badge variant="outline" className="bg-success/20 text-success border-success/30 text-[9px] px-1 py-0">
+                      +{pkg.bonus}% Bonus!
+                    </Badge>
+                  )}
+
+                  <div className="pt-1.5 border-t border-border/50">
+                    <div className="text-[10px] text-muted-foreground mb-1">
+                      Base: {(pkg.xpAmount / (1 + pkg.bonus / 100)).toFixed(0)} XP
+                    </div>
+                    <Button
+                      className="w-full bg-gradient-primary hover:shadow-glow h-7 text-xs"
+                      disabled={isProcessing}
+                    >
+                      {selectedPackage?.id === pkg.id && isProcessing ? (
+                        <>
+                          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                          Processing...
+                        </>
+                      ) : (
+                        <>
+                          Pay ${pkg.price}
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            </Card>
-          ))}
+              </Card>
+            ))}
+          </div>
+
+          {/* Second row - 3 items */}
+          <div className="grid grid-cols-3 gap-2">
+            {XP_PACKAGES.slice(2).map((pkg) => (
+              <Card
+                key={pkg.id}
+                className={`p-2 cursor-pointer transition-all hover:shadow-glow ${
+                  pkg.popular
+                    ? 'border-primary bg-gradient-card relative'
+                    : 'border-border/50 hover:border-primary/50'
+                }`}
+                onClick={() => handlePurchase(pkg)}
+              >
+                {pkg.popular && (
+                  <Badge className="absolute -top-1.5 -right-1.5 bg-gradient-primary text-[9px] px-1 py-0">
+                    <Sparkles className="h-2.5 w-2.5 mr-0.5" />
+                    Popular
+                  </Badge>
+                )}
+                
+                <div className="space-y-1.5">
+                  <div>
+                    <h3 className="font-bold text-[11px]">{pkg.name}</h3>
+                    <p className="text-sm font-bold text-primary">
+                      {pkg.xpAmount.toLocaleString()} XP
+                    </p>
+                  </div>
+
+                  {pkg.bonus > 0 && (
+                    <Badge variant="outline" className="bg-success/20 text-success border-success/30 text-[8px] px-1 py-0">
+                      +{pkg.bonus}%
+                    </Badge>
+                  )}
+
+                  <div className="pt-1.5 border-t border-border/50">
+                    <div className="text-[9px] text-muted-foreground mb-1">
+                      {(pkg.xpAmount / (1 + pkg.bonus / 100)).toFixed(0)} XP
+                    </div>
+                    <Button
+                      className="w-full bg-gradient-primary hover:shadow-glow h-6 text-[10px]"
+                      disabled={isProcessing}
+                    >
+                      {selectedPackage?.id === pkg.id && isProcessing ? (
+                        <>
+                          <Loader2 className="h-2.5 w-2.5 animate-spin" />
+                        </>
+                      ) : (
+                        <>
+                          ${pkg.price}
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
         </div>
 
         <div className="mt-3 p-3 bg-muted/30 rounded-lg border border-border/50">

@@ -3,11 +3,15 @@ import { UserXPState, XPTransaction } from '@/types/xp';
 import { useAccount } from 'wagmi';
 
 const STORAGE_KEY = 'user_xp_state';
+const DEFAULT_USER_KEY = 'default_user'; // Fallback key when no wallet connected
 
 // This is a simple local storage implementation
 // In production, you'd want to use a backend API
 export const useXPBalance = () => {
   const { address } = useAccount();
+  // Use address if available, otherwise use default key
+  const userKey = address || DEFAULT_USER_KEY;
+  
   const [xpState, setXpState] = useState<UserXPState>({
     balance: 0,
     totalPurchased: 0,
@@ -18,25 +22,28 @@ export const useXPBalance = () => {
 
   // Load XP state from localStorage
   useEffect(() => {
-    if (address) {
-      const storageKey = `${STORAGE_KEY}_${address}`;
-      const saved = localStorage.getItem(storageKey);
-      if (saved) {
-        try {
-          setXpState(JSON.parse(saved));
-        } catch (e) {
-          console.error('Failed to load XP state:', e);
-        }
+    const storageKey = `${STORAGE_KEY}_${userKey}`;
+    const saved = localStorage.getItem(storageKey);
+    if (saved) {
+      try {
+        const loadedState = JSON.parse(saved);
+        console.log('✅ Loaded XP state:', loadedState);
+        setXpState(loadedState);
+      } catch (e) {
+        console.error('Failed to load XP state:', e);
       }
+    } else {
+      console.log('📦 No saved XP state found for:', userKey);
     }
-  }, [address]);
+  }, [userKey]);
 
   // Add XP (from purchase or win)
   const addXP = useCallback((amount: number, type: 'purchase' | 'win', txHash?: string) => {
+    console.log(`💰 Adding ${amount} XP (${type}) for user:`, userKey);
     setXpState((prevState) => {
       const transaction: XPTransaction = {
         id: `${Date.now()}_${Math.random()}`,
-        userId: address || 'unknown',
+        userId: userKey,
         type,
         amount,
         timestamp: Date.now(),
@@ -52,14 +59,13 @@ export const useXPBalance = () => {
       };
 
       // Save to localStorage
-      if (address) {
-        const storageKey = `${STORAGE_KEY}_${address}`;
-        localStorage.setItem(storageKey, JSON.stringify(newState));
-      }
+      const storageKey = `${STORAGE_KEY}_${userKey}`;
+      localStorage.setItem(storageKey, JSON.stringify(newState));
+      console.log('✅ Saved XP state:', newState, 'to', storageKey);
 
       return newState;
     });
-  }, [address]);
+  }, [userKey]);
 
   // Deduct XP (from bet)
   const deductXP = useCallback((amount: number, type: 'bet' | 'cashout') => {
@@ -70,7 +76,7 @@ export const useXPBalance = () => {
 
       const transaction: XPTransaction = {
         id: `${Date.now()}_${Math.random()}`,
-        userId: address || 'unknown',
+        userId: userKey,
         type,
         amount: -amount,
         timestamp: Date.now(),
@@ -84,14 +90,12 @@ export const useXPBalance = () => {
       };
 
       // Save to localStorage
-      if (address) {
-        const storageKey = `${STORAGE_KEY}_${address}`;
-        localStorage.setItem(storageKey, JSON.stringify(newState));
-      }
+      const storageKey = `${STORAGE_KEY}_${userKey}`;
+      localStorage.setItem(storageKey, JSON.stringify(newState));
 
       return newState;
     });
-  }, [address]);
+  }, [userKey]);
 
   // Check if user has enough XP
   const hasEnoughXP = useCallback((amount: number) => {
@@ -110,11 +114,9 @@ export const useXPBalance = () => {
     
     setXpState(newState);
     
-    if (address) {
-      const storageKey = `${STORAGE_KEY}_${address}`;
-      localStorage.setItem(storageKey, JSON.stringify(newState));
-    }
-  }, [address]);
+    const storageKey = `${STORAGE_KEY}_${userKey}`;
+    localStorage.setItem(storageKey, JSON.stringify(newState));
+  }, [userKey]);
 
   return {
     xpBalance: xpState.balance,

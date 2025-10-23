@@ -2,6 +2,14 @@ import { XPPackage } from '@/types/xp';
 
 export const XP_PACKAGES: XPPackage[] = [
   {
+    id: 'trial',
+    name: 'Trial Pack',
+    xpAmount: 100,
+    price: '1',
+    currency: 'USDC',
+    bonus: 0,
+  },
+  {
     id: 'starter',
     name: 'Starter Pack',
     xpAmount: 500,
